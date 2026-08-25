@@ -1,0 +1,18 @@
+# dsh-music-mode bundle patch：把音乐模式的三个 entry 挂进宿主 DSH 的 Loader。
+#
+# 作为 profile 层（dsh.bundle.patch）被 include 挂载后，这些行进入 Loader 树；
+# client-modules 会扫描带 `dsh.client` 声明的 entry（client 行用根包名，故只有
+# 它命中 dsh.client；两个 host 行走 ./server-* 子路径，不会被误判为 client）。
+
+- insert:
+    # 播放器托管：spawn vendored regret-radio 后端 + serve 前端 + 反代 /api
+    - id: music-server-regret-visual
+      name: '@oldsan888/dsh-music-mode/server-visual'
+
+    # AI 控制工具集：注册 17 个 music_* 动作 + music_get_state
+    - id: music-tool-music
+      name: '@oldsan888/dsh-music-mode/server-tool'
+
+    # 「音乐」tab 视图（client；node 半 = 聚合包根 apply）
+    - id: music-ui-music-mode
+      name: '@oldsan888/dsh-music-mode'

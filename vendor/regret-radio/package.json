@@ -1,0 +1,28 @@
+{
+  "name": "@deepseek-ai/dsh-regret-radio",
+  "version": "0.1.0",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "description": "Vendored Regret-radio (slim music core) for the DSH music-mode plugin: server half spawns this backend, it serves the frontend public/ and exposes music APIs + player command injection.",
+  "scripts": {
+    "start": "node --import tsx/esm src/server.ts",
+    "test": "node --import tsx/esm --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/multipart": "8.3.0",
+    "@fastify/static": "^7.0.4",
+    "axios": "^1.13.3",
+    "better-sqlite3": "^12.10.1",
+    "dotenv": "16.4.5",
+    "fastify": "4.28.1",
+    "mpg123-decoder": "^1.0.3",
+    "NeteaseCloudMusicApi": "^4.32.0",
+    "ulid": "2.3.0",
+    "yaml": "2.6.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "tsx": "4.19.1"
+  }
+}

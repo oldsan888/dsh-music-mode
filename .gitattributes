@@ -1,0 +1,2 @@
+# 与 DSH 主仓库一致的规范：仓库内统一 LF，CRLF 只是 checkout 呈现。
+* text=auto eol=lf

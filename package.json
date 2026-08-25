@@ -1,0 +1,80 @@
+{
+  "name": "@oldsan888/dsh-music-mode",
+  "version": "0.1.0",
+  "description": "DSH 音乐模式插件 (bundle)：向 DSH web 提供「音乐」tab（client 舞台）+ regret-radio 播放器托管（host）+ AI music_* 控制工具（host）。一个 git 地址即可 `dsh plugin add` 接入。开发与验证于 DSH 0.1.0-rc.5。音乐核心（vendor/regret-radio）为 GPL-3.0-or-later。",
+  "type": "module",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./server-visual": "./lib/server-visual.js",
+    "./server-tool": "./lib/server-tool.js",
+    "./client": "./lib/client.js",
+    "./src/*": "./src/*",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/*.js",
+    "lib/*.js.map",
+    "vendor/regret-radio/**",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "watch": "tsdown --watch",
+    "prepare": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx/esm --test test/*.test.ts && pnpm test:sideb && pnpm test:vitest",
+    "test:security": "node --import tsx/esm --test test/security-boundaries.test.ts",
+    "test:sideb": "pnpm --dir vendor/regret-radio test",
+    "test:vitest": "pnpm --dir vendor/regret-radio exec vitest run tests/command-whitelist.spec.ts tests/cookie-store.spec.ts tests/debug-log.spec.ts"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^8.3.0",
+    "@fastify/static": "^7.0.4",
+    "NeteaseCloudMusicApi": "^4.32.0",
+    "axios": "^1.13.3",
+    "better-sqlite3": "^12.10.1",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1",
+    "mpg123-decoder": "^1.0.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsx": "^4.19.1",
+    "ulid": "^2.3.0",
+    "yaml": "^2.6.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^5.6.0",
+    "vitest": "2.1.9"
+  },
+  "license": "GPL-3.0-or-later"
+}

@@ -1,0 +1,29 @@
+{
+  "name": "Regret Radio",
+  "short_name": "Regret Radio",
+  "description": "Immersive AI music radio PWA (frontend design derived from Mineradio).",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#05080b",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Player",
+      "short_name": "Player",
+      "url": "./index.html"
+    }
+  ]
+}

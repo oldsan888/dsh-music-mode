@@ -1,0 +1,16 @@
+# Runtime data (SQLite db, beatmaps, cookies, logs) — created on first run,
+# must never be committed.
+data/
+*.db
+*.db-shm
+*.db-wal
+logs/
+
+# Secrets — never commit real credentials.
+.env
+
+# tsdown no-op bundle output for this app package (see tsdown.config.ts).
+lib/
+
+# Smoke/scratch files.
+smoke.*.log

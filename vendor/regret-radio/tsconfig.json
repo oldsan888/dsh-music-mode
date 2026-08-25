@@ -1,0 +1,21 @@
+{
+  // Vendored Regret-radio backend: a self-contained app spawned by the DSH
+  // music-mode host plugin via `node --import tsx/esm src/server.ts`. It is
+  // NOT a DSH build target (tsdown globs exclude vendor/* as build targets),
+  // so it intentionally does NOT extend the repo root composite config.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}
