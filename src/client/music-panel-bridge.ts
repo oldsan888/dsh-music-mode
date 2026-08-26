@@ -94,8 +94,18 @@ export function postDubeEvents(events: DubePanelEvent[]): boolean {
   return true
 }
 
+/** Clear the iframe mirror before switching to another DSH session. */
+export function resetDubePanel(): boolean {
+  const win = findMusicFrame()
+  if (win === null) return false
+  win.postMessage({ type: 'dube-panel.reset' }, '*')
+  return true
+}
+
 /** 增量推送器：记住已推送的最大 seq，只推新节点（避免整段重发）。 */
-export function createDubePanelPusher() {
+export function createDubePanelPusher(
+  send: (events: DubePanelEvent[]) => boolean = postDubeEvents,
+) {
   let lastSeq = 0
   return {
     /** 喂整棵（或新增）节点列表，只推 seq 大于上次的值，返回本次推送条数。 */
@@ -104,7 +114,7 @@ export function createDubePanelPusher() {
       const fresh = all.filter((e) => e.seq > lastSeq)
       if (fresh.length === 0) return 0
       lastSeq = Math.max(...all.map((e) => e.seq))
-      return postDubeEvents(fresh) ? fresh.length : 0
+      return send(fresh) ? fresh.length : 0
     },
     /** 会话切换时重置游标（避免把旧会话历史推给新 iframe）。 */
     reset(seq = 0): void {

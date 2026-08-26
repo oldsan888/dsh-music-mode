@@ -1034,6 +1034,11 @@
   window.addEventListener('message', function (ev) {
     var data = (ev && ev.data) || null;
     if (!data || typeof data !== 'object') return;
+    if (data.type === 'dube-panel.reset') {
+      if (!els.chatList) buildPanel();
+      if (els.chatList) { els.chatList.innerHTML = ''; showEmptyState(); }
+      return;
+    }
     if (data.type === 'dube-panel.events' && Array.isArray(data.payload)) {
       try { AI.renderStructuredEvents(data.payload); } catch (e) { /* 渲染失败绝不影响播放器 */ }
     }

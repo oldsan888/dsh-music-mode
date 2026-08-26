@@ -18,7 +18,7 @@
 import { useEffect } from 'react'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
-import { createDubePanelPusher } from './music-panel-bridge.ts'
+import { createDubePanelPusher, resetDubePanel } from './music-panel-bridge.ts'
 
 /** 同源视觉 iframe 地址（host 半 serve 的 Regret 前端静态根）。 */
 const VISUAL_URL = '/regret-visual/'
@@ -117,6 +117,7 @@ export type MusicTheaterViewProps = ConvViewProps & PropsLocale<'music-mode'>
 /* —— Phase 2 对话桥（dube-panel-chat-design.md §5）：模块级单例，保活跨视图挂载 —— */
 const dubePanelPusher = createDubePanelPusher() // 单例游标：增量跨挂载一致，绝不整段重发
 let dubePanelLastNodes: readonly unknown[] | null = null
+let dubePanelLastSessionId: string | null = null
 let dubePanelReadyBound = false
 /** iframe 内 ai-overlay 就绪后请求回放：把最近会话节点补推一次（防首帧丢事件）。 */
 function ensureDubePanelReadyListener(): void {
@@ -125,13 +126,16 @@ function ensureDubePanelReadyListener(): void {
   window.addEventListener('message', (ev) => {
     const data = (ev as MessageEvent<{ type?: string }>).data
     if (data && data.type === 'dube-panel.ready') {
+      // A ready message means the iframe document was freshly loaded and its DOM is empty.
+      // Reset the parent-side cursor so the complete current conversation is replayed.
+      dubePanelPusher.reset()
       dubePanelPusher.push(dubePanelLastNodes ?? [])
     }
   })
 }
 
 /** 对话内容区舞台组件：复用保活 iframe，挂载显示、卸载隐藏（音乐不断）。 */
-export function MusicTheaterView({ useSession }: MusicTheaterViewProps) {
+export function MusicTheaterView({ sessionId, useSession }: MusicTheaterViewProps) {
   // Phase 2：订阅会话快照 .chat（完整对话树），变化时增量推给 dube-panel。
   const chat = useSession?.((s: any) => (s && s.chat) ?? null)
   useEffect(() => {
@@ -140,7 +144,7 @@ export function MusicTheaterView({ useSession }: MusicTheaterViewProps) {
     const host = ensureHost()
     host.style.display = 'block'
     ensureDubePanelReadyListener()
-    pushAndHold(chat)
+    pushAndHold(String(sessionId), chat)
     return () => {
       // 切走：隐藏而非移除，保 iframe/播放存活。
       hideHost()
@@ -148,15 +152,21 @@ export function MusicTheaterView({ useSession }: MusicTheaterViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
-    pushAndHold(chat)
+    pushAndHold(String(sessionId), chat)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat])
+  }, [sessionId, chat])
   // 组件渲染时自身 return null：真正可见的是常驻滚动区里的 host。
   return null
 }
 
 /** 取最新节点 + 保持游标有序地推送（顺序敏感，见 music-panel-bridge）。 */
-function pushAndHold(chat: any): void {
+function pushAndHold(sessionId: string, chat: any): void {
+  if (dubePanelLastSessionId !== sessionId) {
+    dubePanelLastSessionId = sessionId
+    dubePanelLastNodes = null
+    dubePanelPusher.reset()
+    resetDubePanel()
+  }
   const nodes = (chat && (chat.legacy?.nodes ?? chat.nodes?.values?.())) ?? null
   if (Array.isArray(nodes)) {
     dubePanelLastNodes = nodes

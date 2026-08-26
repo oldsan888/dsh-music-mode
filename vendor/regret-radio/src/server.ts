@@ -71,6 +71,28 @@ app.addHook("onResponse", (req, reply, done) => {
 
 app.get("/health", async () => ({ ok: true }));
 
+/* ─────────── Slim-player compatibility surface ─────────── */
+
+/**
+ * The vendored player still probes the former A-side runtime-config endpoint.
+ * Return only public UI defaults: never serialize process configuration or secrets.
+ */
+app.get("/api/config", async () => ({
+  assistant_name: "dube",
+  capabilities: { weather_radio: false },
+}));
+
+/**
+ * Weather radio belongs to the stripped A-side backend. A successful disabled
+ * response lets the retained player UI degrade without noisy 404s or network calls.
+ */
+app.get("/api/weather/radio", async () => ({
+  available: false,
+  reason: "weather_radio_disabled",
+  weather: null,
+  radio: null,
+}));
+
 /* ─────────── Music taste / events（B 派：听歌口味，保留）─────────── */
 
 /** POST /api/music/events — 记录音乐行为事件（批量） */
