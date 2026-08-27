@@ -13215,7 +13215,7 @@ function escHtml(s){ var d = document.createElement('div'); d.textContent = s; r
 //  B 面 · 听感手记（Side B）
 //  硬规则：界面里的 DSH 文案只陈述事实或提问，不替用户解释情绪。
 // ============================================================
-var sideBState = { view:'track', mood:'', prompt:null, track:null, notes:[], loading:false, anchorTrackId:'', mailboxInitialized:false };
+var sideBState = { view:'track', mood:'', prompt:null, track:null, notes:[], loading:false, anchorTrackId:'', mailboxInitialized:false, refreshId:0 };
 var SIDE_B_MOODS = [
   ['sad','难过'],['miss','想念'],['calm','平静'],['relief','释然'],
   ['lift','上头'],['annoyed','烦'],['numb','发空'],['pure','就是好听']
@@ -13352,6 +13352,7 @@ function sideBBindRoot(root){
 async function sideBRefresh(force){
   var root = document.getElementById('sideb-root');
   if (!root || (sideBState.loading && !force)) return;
+  var refreshId = ++sideBState.refreshId;
   sideBState.loading = true; sideBRender();
   try {
     var current = sideBCurrentTrack();
@@ -13363,19 +13364,31 @@ async function sideBRefresh(force){
       sideBState.view = 'all';
       sideBState.mailboxInitialized = true;
     }
-    var promptParams = { user_id:sideBUserId() };
-    if (current) Object.assign(promptParams, current);
-    var prompt = await apiJson('/api/music/notes/prompt?' + sideBQuery(promptParams));
-    sideBState.prompt = prompt || {kind:'none'};
-    sideBState.track = prompt && prompt.track ? prompt.track : current;
+    // 即时提问只能绑定播放器此刻实际持有的曲目。若队列为空，notes/prompt 的无 track
+    // 查询会退回最近一条 music_event；把那首历史歌曲写进 state.track 会制造“仍在播放”的假象。
+    if (current) {
+      var promptParams = Object.assign({ user_id:sideBUserId() }, current);
+      var prompt = await apiJson('/api/music/notes/prompt?' + sideBQuery(promptParams));
+      if (refreshId !== sideBState.refreshId) return;
+      sideBState.prompt = prompt || {kind:'none'};
+      sideBState.track = prompt && prompt.track ? prompt.track : current;
+    } else {
+      sideBState.prompt = {kind:'none'};
+      sideBState.track = null;
+      sideBState.mood = '';
+    }
     var noteParams = { user_id:sideBUserId(), all:1, limit:100 };
     if (sideBState.view === 'track' && sideBState.track && sideBState.track.work_key) noteParams.work_key = sideBState.track.work_key;
     var notesResult = await apiJson('/api/music/notes?' + sideBQuery(noteParams));
+    if (refreshId !== sideBState.refreshId) return;
     sideBState.notes = notesResult && notesResult.items || [];
   } catch (e) {
+    if (refreshId !== sideBState.refreshId) return;
     console.warn('[SideB]', e);
     sideBState.notes = sideBState.notes || [];
-  } finally { sideBState.loading = false; sideBRender(); }
+  } finally {
+    if (refreshId === sideBState.refreshId) { sideBState.loading = false; sideBRender(); }
+  }
 }
 async function sideBSubmit(input, source){
   var text = String(input && input.value || '').trim();
@@ -14596,16 +14609,15 @@ async function playHomeRecent(record) {
   await playQueueAt(0);
 }
 function openHomeInsight() {
-  var summary = homeListenSummary();
-  if (summary.topArtist && summary.topArtist.name) {
-    runHomeSearch(summary.topArtist.name);
-    return;
+  // 「听歌画像」必须通往画像本身。旧实现会改为搜索常听歌手，入口语义与结果不一致，
+  // 也让用户无法发现音乐事件究竟记录了什么。
+  var ai = window.RegretRadioAI;
+  if (ai && typeof ai.openPanel === 'function' && typeof ai.switchTab === 'function') {
+    ai.openPanel();
+    ai.switchTab('memory');
+  } else {
+    showToast('听歌画像正在加载，请稍后再试');
   }
-  if (summary.topSong && summary.topSong.name) {
-    runHomeSearch(summary.topSong.name);
-    return;
-  }
-  showToast('播放几首歌后会生成听歌画像');
 }
 async function playWeatherSong(index) {
   var radio = homeWeatherRadioState.radio;

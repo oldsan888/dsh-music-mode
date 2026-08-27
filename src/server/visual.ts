@@ -398,6 +398,8 @@ export function apply(ctx: Context, config: Config = {}): void {
         '/api/audio', '/api/cover', '/api/player/link', '/api/player/command', '/api/player/state',
         // 完整滚动音乐画像：只读 GET；无 checkpoint/pending/consume 状态机。
         '/api/music/taste-summary',
+        // 播放器行为埋点 + 画像“最近发生”。写操作仍受 loopback 与 same-origin 双重边界保护。
+        '/api/music/events',
         // B 面根路径最小暴露：GET 只回 shared 原文，POST 强制 source=agent + shared。
         '/api/music/notes',
       ]

@@ -138,14 +138,16 @@ app.post("/api/music/notes", async (req, reply) => {
   const b = (req.body ?? {}) as any;
   const visual = isVisualNotesChannel(req);
   try {
-    const { createMusicNote, resetSideBDismissStreak } = await import("./music/notes.js");
-    const note = createMusicNote({
+    const { createMusicNoteWithPreference, resetSideBDismissStreak } = await import("./music/notes.js");
+    const preference = b.preference === "liked" || b.preference === "disliked" ? b.preference : undefined;
+    if (b.preference != null && !preference) throw new Error("invalid preference");
+    const result = createMusicNoteWithPreference({
       ...b,
       source: visual && b.source === "hint" ? "hint" : visual ? "hero" : "agent",
       shared: visual ? false : true,
-    });
-    resetSideBDismissStreak(note.user_id);
-    return reply.code(201).send({ note });
+    }, visual ? undefined : preference);
+    resetSideBDismissStreak(result.note.user_id);
+    return reply.code(201).send({ note: result.note, preference_recorded: result.preferenceRecorded });
   } catch (e) {
     return reply.code(400).send({ error: (e as Error).message });
   }

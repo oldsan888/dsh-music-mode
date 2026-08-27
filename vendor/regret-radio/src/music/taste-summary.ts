@@ -160,7 +160,7 @@ export function buildTasteContextText(input: {
   if (input.stats.skipTracks.length > 0) {
     lines.push(`15秒内快切：${input.stats.skipTracks.map((t) => `《${t.title}》×${t.skips}`).join("、")}`);
   }
-  lines.push(`播放开始 ${input.stats.playedCount} / 完整播完 ${input.stats.completedCount} / 跳过 ${input.stats.skippedCount} / 明确点赞 ${input.stats.likedCount}`);
+  lines.push(`播放开始 ${input.stats.playedCount} / 完整播完 ${input.stats.completedCount} / 跳过 ${input.stats.skippedCount} / 对话中明确喜欢 ${input.stats.likedCount}`);
   if (input.notes.count > 0) {
     lines.push(`近窗已授权/聚合手记 ${input.notes.count} 条；不得把未授权原文或行为推断改写成用户情绪。`);
   }

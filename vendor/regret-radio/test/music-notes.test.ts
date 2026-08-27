@@ -45,6 +45,25 @@ test("note validation, private gate, sharing, and aggregate", () => {
   assert.equal(sharedRead.items[0].text, "测试听感");
 });
 
+test("DSH note and explicit preference are persisted together", async () => {
+  const events = await import("../src/music/events.js");
+  const result = notes.createMusicNoteWithPreference({
+    user_id: "explicit-user", track_id: "come-back", track_title: "Come Back To Me",
+    track_artist: "Utada", provider: "netease", source: "agent", shared: true,
+    text: "我现在在放一首歌，我很喜欢",
+  }, "liked");
+
+  assert.equal(result.preferenceRecorded, "liked");
+  assert.equal(result.note.text, "我现在在放一首歌，我很喜欢");
+  const recent = events.getRecentEvents("explicit-user", 5);
+  assert.equal(recent.length, 1);
+  assert.equal(recent[0].event_type, "liked");
+  assert.equal(recent[0].track_title, "Come Back To Me");
+  assert.throws(() => notes.createMusicNoteWithPreference({
+    user_id: "explicit-user", track_id: "x", source: "hero", text: "喜欢",
+  }, "liked"), /requires agent source/);
+});
+
 test("three dismissals mute proactive prompts for 72 hours", () => {
   assert.equal(notes.canShowSideBHint("mute-user"), true);
   assert.equal(notes.dismissSideBPrompt("mute-user", "song|artist").mutedUntil, null);

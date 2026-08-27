@@ -1,8 +1,8 @@
 import { ulid } from "ulid";
-import { execute, query, queryOne } from "../store/sqlite.js";
+import { execute, query, queryOne, withTx } from "../store/sqlite.js";
 import { readAppConfig, writeAppConfig } from "../store/app-config.js";
 import { getNow, getNowDate, parseSqliteUtc, toLocalDate, toSqliteUtc } from "../store/clock.js";
-import { splitArtists } from "./events.js";
+import { aggregatePreferences, recordEvent, splitArtists } from "./events.js";
 
 export const MUSIC_NOTE_MOODS = [
   "sad", "miss", "calm", "relief", "lift", "annoyed", "numb", "pure",
@@ -42,6 +42,41 @@ export interface MusicNoteRow {
   source: MusicNoteSource;
   shared_at: string | null;
   created_at: string;
+}
+
+export type ExplicitMusicPreference = "liked" | "disliked";
+
+/**
+ * One DSH-authored user statement can carry two truths: the verbatim B-side note and an
+ * explicit preference. Persist them in one SQLite transaction so the UI cannot show the
+ * quote while the taste profile still misses the preference (or vice versa).
+ */
+export function createMusicNoteWithPreference(
+  input: MusicNoteInput,
+  preference?: ExplicitMusicPreference,
+): { note: MusicNoteRow; preferenceRecorded: ExplicitMusicPreference | null } {
+  if (preference && input.source !== "agent") {
+    throw new Error("explicit preference requires agent source");
+  }
+  return withTx(() => {
+    const note = createMusicNote(input);
+    if (preference) {
+      recordEvent({
+        user_id: note.user_id,
+        track_id: note.track_id,
+        track_title: note.track_title ?? undefined,
+        track_artist: note.track_artist ?? undefined,
+        event_type: preference === "liked" ? "liked" : "unliked",
+        context: {
+          provider: note.provider ?? "",
+          source: "dsh_explicit_preference",
+          note_id: note.note_id,
+        },
+      });
+      aggregatePreferences(note.user_id);
+    }
+    return { note, preferenceRecorded: preference ?? null };
+  });
 }
 
 export function normalizeWorkTitle(raw: string): string {

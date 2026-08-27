@@ -31,6 +31,7 @@
   var detailMode = (function () { try { return localStorage.getItem('regretradio.dube_detail') === '1'; } catch (e) { return false; } })();
   var audioUnlocked = false;
   var curTab = 'chat';
+  var memoryLoadToken = 0;
   var built = false;
   var els = {};                 // 关键 DOM 缓存
 
@@ -72,20 +73,50 @@
       '.dube-confirm-btn.danger{border-color:rgba(255,120,120,.5);background:rgba(255,90,90,.14);color:#ff9a9a}',
       '.dube-confirm-btn:focus{outline:none;box-shadow:0 0 0 2px rgba(244,210,138,.42)}',
       '.dube-confirm-btn.danger:focus{box-shadow:0 0 0 2px rgba(255,120,120,.48)}',
-      '#dube-tabs{display:flex;gap:8px;flex:0 0 auto;margin-bottom:8px}',
-      '#dube-tabs .panel-tab{cursor:pointer}',
+      '#dube-tabs{display:flex;gap:4px;flex:0 0 auto;margin-bottom:10px;padding:3px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}',
+      '#dube-tabs .panel-tab{cursor:pointer;flex:1;justify-content:center;border-radius:9px}',
+      '#dube-tabs .dube-tab-count{display:none;min-width:17px;height:17px;padding:0 5px;align-items:center;justify-content:center;border-radius:999px;background:rgba(244,210,138,.14);color:var(--champagne,#f4d28a);font-size:9.5px;font-variant-numeric:tabular-nums}',
+      '#dube-tabs .dube-tab-count.show{display:inline-flex}',
       // 隐藏滚动条但保留滚动（滚轮/触控/拖拽仍可用），视觉更干净——同 track-detail-modal 的隐藏写法
       '#dube-chat-pane,#dube-memory-pane{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none}',
       '#dube-chat-pane::-webkit-scrollbar,#dube-memory-pane::-webkit-scrollbar{width:0;height:0;display:none}',
       '#dube-chat-list{display:flex;flex-direction:column;gap:12px;padding:2px 2px 8px}',
-      // 音乐事件统计卡
+      // 听歌画像：把后台事件翻译成用户看得懂、能验证的结论，而不是只暴露数据库计数。
       '#dube-memory-pane .dube-mem-list{display:flex;flex-direction:column;gap:10px;padding:2px 2px 8px}',
       '#dube-memory-pane .dube-empty{color:rgba(255,255,255,.38);font-size:12px;text-align:center;padding:20px 8px}',
-      '#dube-memory-pane .dube-music-stat{display:flex;align-items:baseline;justify-content:space-between;padding:13px 14px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10)}',
-      '#dube-memory-pane .dube-music-stat + .dube-music-stat{margin-top:9px}',
-      '#dube-memory-pane .dube-music-stat-n{font-size:22px;font-weight:760;color:var(--champagne,#f4d28a);font-variant-numeric:tabular-nums;letter-spacing:.5px}',
-      '#dube-memory-pane .dube-music-stat-l{font-size:12px;color:rgba(255,255,255,.58);letter-spacing:.3px}',
-      '#dube-memory-pane #dube-music-stat-refresh{width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin-top:6px}',
+      '.dube-insight-hero{position:relative;overflow:hidden;padding:15px 15px 14px;border-radius:15px;background:linear-gradient(135deg,rgba(var(--fc-accent-rgb,0,245,212),.12),rgba(244,210,138,.07));border:1px solid rgba(var(--fc-accent-rgb,0,245,212),.18)}',
+      '.dube-insight-hero::after{content:"";position:absolute;right:-22px;top:-32px;width:94px;height:94px;border-radius:50%;background:rgba(var(--fc-accent-rgb,0,245,212),.08);filter:blur(2px)}',
+      '.dube-insight-kicker{display:flex;align-items:center;gap:7px;color:rgba(255,255,255,.52);font-size:10.5px;letter-spacing:.5px}',
+      '.dube-insight-live{width:6px;height:6px;border-radius:50%;background:rgb(var(--fc-accent-rgb,0,245,212));box-shadow:0 0 0 4px rgba(var(--fc-accent-rgb,0,245,212),.10)}',
+      '.dube-insight-title{position:relative;z-index:1;margin-top:7px;font-size:17px;font-weight:680;line-height:1.35;color:#fff}',
+      '.dube-insight-desc{position:relative;z-index:1;margin-top:5px;color:rgba(255,255,255,.5);font-size:11px;line-height:1.55}',
+      '.dube-insight-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}',
+      '.dube-insight-metric{min-width:0;padding:10px 5px 9px;text-align:center;border-radius:11px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.075)}',
+      '.dube-insight-metric strong{display:block;color:#fff;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}',
+      '.dube-insight-metric span{display:block;margin-top:3px;color:rgba(255,255,255,.42);font-size:9.5px;white-space:nowrap}',
+      '.dube-insight-section{padding:12px 13px;border-radius:13px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.075)}',
+      '.dube-insight-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}',
+      '.dube-insight-section-title{color:rgba(255,255,255,.82);font-size:11.5px;font-weight:650;letter-spacing:.25px}',
+      '.dube-insight-section-note{color:rgba(255,255,255,.32);font-size:9.5px}',
+      '.dube-insight-tags{display:flex;flex-wrap:wrap;gap:6px}',
+      '.dube-insight-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:rgba(var(--fc-accent-rgb,0,245,212),.08);border:1px solid rgba(var(--fc-accent-rgb,0,245,212),.16);color:rgba(225,255,250,.82);font-size:10.5px}',
+      '.dube-insight-tag.negative{background:rgba(255,130,130,.055);border-color:rgba(255,130,130,.14);color:rgba(255,190,190,.76)}',
+      '.dube-insight-tag small{color:rgba(255,255,255,.34);font-size:9px}',
+      '.dube-insight-empty-inline{color:rgba(255,255,255,.34);font-size:10.5px;line-height:1.55}',
+      '.dube-insight-track-list,.dube-event-list{display:flex;flex-direction:column;gap:3px}',
+      '.dube-insight-track,.dube-event-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.055)}',
+      '.dube-insight-track:last-child,.dube-event-row:last-child{border-bottom:0}',
+      '.dube-insight-track-icon,.dube-event-icon{width:23px;height:23px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.055);color:var(--champagne,#f4d28a);font-size:10px}',
+      '.dube-insight-track-main,.dube-event-main{min-width:0}',
+      '.dube-insight-track-name,.dube-event-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.78);font-size:10.5px}',
+      '.dube-insight-track-sub,.dube-event-sub{margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.34);font-size:9.5px}',
+      '.dube-insight-track-count,.dube-event-time{color:rgba(255,255,255,.38);font-size:9.5px;font-variant-numeric:tabular-nums;white-space:nowrap}',
+      '.dube-insight-explain{font-size:10px;line-height:1.65;color:rgba(255,255,255,.38)}',
+      '.dube-insight-explain strong{color:rgba(255,255,255,.65);font-weight:600}',
+      '.dube-insight-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:1px 2px}',
+      '.dube-insight-updated{color:rgba(255,255,255,.28);font-size:9.5px}',
+      '#dube-memory-pane #dube-music-stat-refresh{height:27px;padding:0 11px;font-size:10px}',
+      '@media(max-width:520px){.dube-insight-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}',
       '.dube-turn{display:flex;flex-direction:column;gap:6px}',
       '.dube-turn.user{align-items:flex-end}',
       '.dube-bubble{max-width:88%;padding:8px 12px;border-radius:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}',
@@ -159,16 +190,16 @@
           // 图标统一走 stroke SVG：emoji 跨平台渲染不一、吃不到 currentColor/active 金色态
           '<button class="dube-icobtn" id="dube-think" title="详细模式：开/关（显示思考/工具步骤）" aria-label="详细模式开关"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.9 10.55c.57.5.9 1.21.9 1.95V16h6v-.5c0-.74.33-1.45.9-1.95A6 6 0 0 0 12 3z"/></svg></button>' +
           '<button class="dube-icobtn" id="dube-pin" title="常开（面板不自动隐藏）" aria-label="常开开关"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16h14v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"/></svg></button>' +
-          '<button class="dube-icobtn danger" id="dube-forget" title="清空对话内容" aria-label="清空对话内容"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
+          '<button class="dube-icobtn danger" id="dube-forget" title="清空全部音乐助手数据" aria-label="清空全部音乐助手数据"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
           '<button class="dube-icobtn" id="dube-close" title="关闭" aria-label="关闭面板"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
         '</div>' +
       '</div>' +
-      '<div class="panel-tabs" id="dube-tabs">' +
-        '<button class="panel-tab active" id="dube-tab-chat">对话</button>' +
-        '<button class="panel-tab" id="dube-tab-memory">音乐事件</button>' +
+      '<div class="panel-tabs" id="dube-tabs" role="tablist" aria-label="对话面板内容">' +
+        '<button class="panel-tab active" id="dube-tab-chat" role="tab" aria-selected="true" aria-controls="dube-chat-pane">对话记录</button>' +
+        '<button class="panel-tab" id="dube-tab-memory" role="tab" aria-selected="false" aria-controls="dube-memory-pane">听歌画像 <span class="dube-tab-count" id="dube-event-count"></span></button>' +
       '</div>' +
-      '<div id="dube-chat-pane"><div id="dube-chat-list"></div></div>' +
-      '<div id="dube-memory-pane" style="display:none"></div>';
+      '<div id="dube-chat-pane" role="tabpanel" aria-labelledby="dube-tab-chat"><div id="dube-chat-list"></div></div>' +
+      '<div id="dube-memory-pane" role="tabpanel" aria-labelledby="dube-tab-memory" style="display:none"></div>';
     panel.appendChild(root);
     els.root = root;
     els.title = root.querySelector('#dube-title');
@@ -178,6 +209,7 @@
     els.memPane = root.querySelector('#dube-memory-pane');
     els.tabChat = root.querySelector('#dube-tab-chat');
     els.tabMem = root.querySelector('#dube-tab-memory');
+    els.eventCount = root.querySelector('#dube-event-count');
     els.pin = root.querySelector('#dube-pin');
     els.think = root.querySelector('#dube-think');
     wire();
@@ -192,7 +224,7 @@
 
   function showEmptyState() {
     if (!els.chatList) return;
-    var html = '<div class="dube-empty">承载对话内容。</div>';
+    var html = '<div class="dube-empty">这里同步当前 DSH 会话，方便你在听歌时回看上下文。<br>发送消息仍使用页面底部输入框。</div>';
     var empty = els.chatList.querySelector('.dube-empty');
     // 已是空态 → 原地刷新文案（配置加载/改名后名字要跟上，此前有子元素就跳过导致旧名残留）
     if (empty && els.chatList.children.length === 1) { els.chatList.innerHTML = html; return; }
@@ -226,56 +258,146 @@
     curTab = (tab === 'memory') ? 'memory' : 'chat';
     els.tabChat.classList.toggle('active', curTab === 'chat');
     els.tabMem.classList.toggle('active', curTab === 'memory');
+    els.tabChat.setAttribute('aria-selected', curTab === 'chat' ? 'true' : 'false');
+    els.tabMem.setAttribute('aria-selected', curTab === 'memory' ? 'true' : 'false');
     els.chatPane.style.display = curTab === 'chat' ? '' : 'none';
     els.memPane.style.display = curTab === 'memory' ? '' : 'none';
+    if (els.sub) els.sub.textContent = curTab === 'memory' ? '行为如何变成推荐，一眼看懂' : '当前会话的只读镜像';
+    if (els.think) els.think.style.display = curTab === 'chat' ? '' : 'none';
     // 输入坞是对话行为，记忆 tab 下藏起——避免「像是在对记忆列表输入」的歧义
     if (els.dock) els.dock.style.display = curTab === 'chat' ? '' : 'none';
     if (curTab === 'memory') openMemoryTab();
   }
 
   function openMemoryTab() {
-    // 音乐事件面板：展示事实源总量与当前滚动画像窗口。
+    // 事件只是原料；用户真正需要的是「发生了什么 → 系统学到了什么 → 会怎样使用」。
     renderMusicEventStats(els.memPane);
   }
 
   /* ─────────────── 音乐事件面板（原「记忆」tab 换芯） ─────────────── */
   function renderMusicEventStats(container) {
     if (!container) return;
+    var token = ++memoryLoadToken;
     var uid = (window.RegretRadioAI && window.RegretRadioAI.getUserId && window.RegretRadioAI.getUserId()) || 'default';
     container.innerHTML =
-      '<div class="dube-mem-list"><div class="dube-empty">加载中…</div></div>';
-    fetch('/api/music/taste-summary?user_id=' + encodeURIComponent(uid))
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (st) {
-        if (!st) { container.innerHTML = '<div class="dube-mem-list"><div class="dube-empty">音乐事件数据暂不可用。</div></div>'; return; }
-        var total = (st.totalEvents == null ? 0 : st.totalEvents);
-        var analyzed = (st.analyzedEvents == null ? 0 : st.analyzedEvents);
+      '<div class="dube-mem-list"><div class="dube-empty">正在整理你的听歌轨迹…</div></div>';
+    Promise.all([
+      fetch('/api/music/taste-summary?user_id=' + encodeURIComponent(uid)).then(function (r) { return r.ok ? r.json() : null; }),
+      fetch('/api/music/events?user_id=' + encodeURIComponent(uid) + '&limit=12').then(function (r) { return r.ok ? r.json() : null; }),
+    ])
+      .then(function (rows) {
+        if (token !== memoryLoadToken) return;
+        var st = rows[0];
+        var recent = rows[1] && Array.isArray(rows[1].items) ? rows[1].items : [];
+        if (!st) { container.innerHTML = musicInsightError('暂时读不到听歌画像。播放器仍可正常使用。'); return; }
+        var total = Number(st.totalEvents) || 0;
+        var types = st.eventTypes || {};
+        var analyzed = Number(st.analyzedEvents) || 0;
+        var positive = st.preferences && Array.isArray(st.preferences.positive) ? st.preferences.positive : [];
+        var negative = st.preferences && Array.isArray(st.preferences.negative) ? st.preferences.negative : [];
+        var repeatTracks = Array.isArray(st.repeatTracks) ? st.repeatTracks : [];
+        var quickSkipTracks = Array.isArray(st.quickSkipTracks) ? st.quickSkipTracks : [];
+        var hasProfile = positive.length || negative.length || repeatTracks.length || quickSkipTracks.length;
+        var stateTitle = !total ? '还没有可分析的听歌动作' : hasProfile ? '画像正在形成，推荐会随行为更新' : '正在积累信号，还不足以形成倾向';
+        var windowNote = '分析最近 ' + (Number(st.windowDays) || 180) + ' 天的 ' + analyzed + ' 条事件' + (st.truncated ? '（仅取最近一部分）' : '');
         container.innerHTML =
           '<div class="dube-mem-list">' +
-            '<div class="dube-music-stat"><span class="dube-music-stat-n">' + total + '</span><span class="dube-music-stat-l">当前事件积累（条）</span></div>' +
-            '<div class="dube-music-stat"><span class="dube-music-stat-n">' + analyzed + '</span><span class="dube-music-stat-l">滚动画像分析（条）</span></div>' +
-            '<button class="fx-mini-btn ghost" id="dube-music-stat-refresh" style="height:28px;padding:0 12px;font-size:11px;margin-top:6px">刷新</button>' +
+            '<div class="dube-insight-hero">' +
+              '<div class="dube-insight-kicker"><span class="dube-insight-live"></span>实时听歌画像</div>' +
+              '<div class="dube-insight-title">' + esc(stateTitle) + '</div>' +
+              '<div class="dube-insight-desc">已记录 ' + total + ' 次播放、切歌、明确喜恶或排队动作。' + esc(windowNote) + '。</div>' +
+            '</div>' +
+            '<div class="dube-insight-metrics">' +
+              insightMetric(types.play_started, '开始播放') +
+              insightMetric(types.play_completed, '完整听完') +
+              insightMetric(types.skipped, '主动跳过') +
+              insightMetric(types.liked, '明确喜欢') +
+            '</div>' +
+            insightPreferenceSection(positive, negative) +
+            insightTrackSection('反复完整播放', '较强的喜欢信号', repeatTracks, '↻', 'plays', '次听完') +
+            insightTrackSection('15 秒内快切', '较强的不喜欢信号', quickSkipTracks, '↷', 'skips', '次快切') +
+            insightRecentSection(recent) +
+            '<div class="dube-insight-section">' +
+              '<div class="dube-insight-section-head"><span class="dube-insight-section-title">系统怎样理解这些事件</span></div>' +
+              '<div class="dube-insight-explain"><strong>你在对话中明确说喜欢</strong>，由 DSH 记录为最强正向信号；<strong>完整听完、主动排队</strong>只会逐步增强行为倾向；<strong>15 秒内快切</strong>是较强负向信号。红心收藏属于音乐平台操作，不计入这里的“明确喜欢”。旧行为会逐渐降权，近 30 天影响更明显。</div>' +
+            '</div>' +
+            '<div class="dube-insight-actions"><span class="dube-insight-updated">更新于 ' + esc(formatInsightTime(st.generatedAt)) + '</span><button class="fx-mini-btn ghost" id="dube-music-stat-refresh">刷新画像</button></div>' +
           '</div>';
+        if (els.eventCount) {
+          els.eventCount.textContent = total > 999 ? '999+' : String(total);
+          els.eventCount.classList.toggle('show', total > 0);
+        }
         var ref = container.querySelector('#dube-music-stat-refresh');
         if (ref) {
           ref.addEventListener('click', function () {
             ref.disabled = true;
-            var t = ref.textContent;
             ref.textContent = '刷新中…';
-            var then = Date.now();
-            fetch('/api/music/taste-summary?user_id=' + encodeURIComponent(uid))
-              .then(function (r) { return r.ok ? r.json() : null; })
-              .then(function () {
-                var wait = Math.max(0, 400 - (Date.now() - then));
-                setTimeout(function () { renderMusicEventStats(container); }, wait);
-              })
-              .catch(function () { ref.disabled = false; ref.textContent = t; });
+            setTimeout(function () { renderMusicEventStats(container); }, 180);
           });
         }
       })
       .catch(function () {
-        container.innerHTML = '<div class="dube-mem-list"><div class="dube-empty">音乐事件数据暂不可用。</div></div>';
+        if (token !== memoryLoadToken) return;
+        container.innerHTML = musicInsightError('暂时读不到听歌画像。播放器仍可正常使用。');
       });
+  }
+
+  function insightMetric(value, label) {
+    return '<div class="dube-insight-metric"><strong>' + (Number(value) || 0) + '</strong><span>' + esc(label) + '</span></div>';
+  }
+
+  function insightPreferenceSection(positive, negative) {
+    function tags(rows, cls) {
+      if (!rows.length) return '<span class="dube-insight-empty-inline">暂无足够证据</span>';
+      return rows.slice(0, 8).map(function (p) {
+        var status = p.status === 'confirmed' ? '已确认' : '行为推断';
+        return '<span class="dube-insight-tag ' + cls + '">' + esc(p.artist || '未知歌手') + '<small>' + status + '</small></span>';
+      }).join('');
+    }
+    return '<div class="dube-insight-section">' +
+      '<div class="dube-insight-section-head"><span class="dube-insight-section-title">歌手倾向</span><span class="dube-insight-section-note">推断，不是定论</span></div>' +
+      '<div class="dube-insight-section-note" style="margin-bottom:6px">更常完整听完 / 对话中明确说喜欢</div><div class="dube-insight-tags">' + tags(positive, '') + '</div>' +
+      '<div class="dube-insight-section-note" style="margin:10px 0 6px">更常较早跳过</div><div class="dube-insight-tags">' + tags(negative, 'negative') + '</div>' +
+    '</div>';
+  }
+
+  function insightTrackSection(title, note, rows, icon, countKey, suffix) {
+    if (!rows.length) return '';
+    var body = rows.slice(0, 6).map(function (t) {
+      return '<div class="dube-insight-track"><span class="dube-insight-track-icon">' + icon + '</span><span class="dube-insight-track-main"><span class="dube-insight-track-name">' + esc(t.title || '未知歌曲') + '</span><span class="dube-insight-track-sub">' + esc(t.artist || '未知歌手') + '</span></span><span class="dube-insight-track-count">' + (Number(t[countKey]) || 0) + suffix + '</span></div>';
+    }).join('');
+    return '<div class="dube-insight-section"><div class="dube-insight-section-head"><span class="dube-insight-section-title">' + esc(title) + '</span><span class="dube-insight-section-note">' + esc(note) + '</span></div><div class="dube-insight-track-list">' + body + '</div></div>';
+  }
+
+  function insightRecentSection(rows) {
+    var labels = { play_started: ['▶', '开始播放'], play_completed: ['✓', '完整听完'], skipped: ['↷', '主动跳过'], liked: ['♥', 'DSH 记为明确喜欢'], unliked: ['×', 'DSH 记为明确不喜欢'], queued: ['+', '加入队列'] };
+    var body = rows.length ? rows.slice(0, 8).map(function (ev) {
+      var meta = labels[ev.event_type] || ['·', ev.event_type || '未知事件'];
+      var pos = ev.event_type === 'skipped' && ev.position_ms != null ? ' · ' + formatDuration(ev.position_ms) + ' 时' : '';
+      return '<div class="dube-event-row"><span class="dube-event-icon">' + meta[0] + '</span><span class="dube-event-main"><span class="dube-event-name">' + esc(meta[1] + '《' + (ev.track_title || '未知歌曲') + '》') + '</span><span class="dube-event-sub">' + esc((ev.track_artist || '未知歌手') + pos) + '</span></span><span class="dube-event-time">' + esc(formatInsightTime(ev.created_at)) + '</span></div>';
+    }).join('') : '<div class="dube-insight-empty-inline">播放一首歌后，刚发生的动作会显示在这里。</div>';
+    return '<div class="dube-insight-section"><div class="dube-insight-section-head"><span class="dube-insight-section-title">最近发生</span><span class="dube-insight-section-note">最多显示 8 条</span></div><div class="dube-event-list">' + body + '</div></div>';
+  }
+
+  function formatDuration(ms) {
+    var seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+    return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+  }
+
+  function formatInsightTime(value) {
+    if (!value) return '刚刚';
+    var normalized = String(value).replace(' ', 'T') + (String(value).indexOf('Z') >= 0 || /[+-]\d\d:?\d\d$/.test(String(value)) ? '' : 'Z');
+    var date = new Date(normalized);
+    if (!Number.isFinite(date.getTime())) return String(value).slice(0, 16);
+    var delta = Date.now() - date.getTime();
+    if (delta >= 0 && delta < 60000) return '刚刚';
+    if (delta >= 0 && delta < 3600000) return Math.floor(delta / 60000) + ' 分钟前';
+    if (delta >= 0 && delta < 86400000) return Math.floor(delta / 3600000) + ' 小时前';
+    return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+  }
+
+  function musicInsightError(message) {
+    return '<div class="dube-mem-list"><div class="dube-empty">' + esc(message) + '<br><button class="fx-mini-btn ghost" style="margin-top:12px" onclick="window.RegretRadioAI.switchTab(\'memory\')">重新加载</button></div></div>';
   }
 
   /* ─────────────── 开/关/切换/常开（复用 togglePlaylistPanel 外壳 + 流式豁免自动隐藏） ─────────────── */
@@ -720,7 +842,7 @@
   }
   function updateNameUI() {
     if (els.title) els.title.textContent = '对话面板';
-    if (els.sub) els.sub.textContent = '';
+    if (els.sub) els.sub.textContent = curTab === 'memory' ? '行为如何变成推荐，一眼看懂' : '当前会话的只读镜像';
     // 输入坞已删除，无 placeholder/输入框可设
     // 入口按钮（index.html 静态 title 只是初始值，这里跟随当前名）
     var btn = document.getElementById('dube-btn');

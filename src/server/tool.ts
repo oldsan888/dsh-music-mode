@@ -276,10 +276,13 @@ export function apply(ctx: Context, config: Config = {}): void {
       '仅当用户明确表达对某首歌或此刻听歌的感受时，把用户原话写入「B 面」。'
       + '禁止把播完、循环、跳过等行为推断改写成用户感受；禁止替用户解释情绪。'
       + 'text 必须保留用户原话或只做最小的口语整理。track_id 不填时使用当前播放歌曲。'
+      + '如果用户原话明确表达“喜欢/很喜欢/爱听”或“不喜欢/难听/不爱听”，必须同时填写 preference；'
+      + '本工具会原子记录明确喜恶，无需再调用 music_rate_song。仅有播放行为或含糊情绪时禁止填写 preference。'
       + '经本工具写入代表用户已亲口对 DSH 分享，原文会被标记为已授权。',
     parameters: {
       text: { type: 'string', description: '用户原话，必填，最多 500 字。不得代写或扩写。' },
       mood: { type: 'string', enum: ['sad', 'miss', 'calm', 'relief', 'lift', 'annoyed', 'numb', 'pure'], description: '仅在用户明确表达且可直接对应时填写。' },
+      preference: { type: 'string', enum: ['liked', 'disliked'], description: '仅在用户明确说喜欢或不喜欢这首歌时填写；liked=明确喜欢，disliked=明确不喜欢。' },
       track_id: { type: 'string', description: '曲目 id；省略时取当前播放。' },
       track_title: { type: 'string', description: '已知曲名；省略时取当前播放。' },
       track_artist: { type: 'string', description: '已知歌手；省略时取当前播放。' },
@@ -312,11 +315,24 @@ export function apply(ctx: Context, config: Config = {}): void {
           user_id: userId, track_id: track.id, track_title: track.name,
           track_artist: track.artist, provider: track.provider, text,
           mood: typeof a.mood === 'string' ? a.mood : undefined,
+          preference: a.preference === 'liked' || a.preference === 'disliked' ? a.preference : undefined,
         }),
       })
       const body = await res.json() as any
       if (!res.ok) throw new Error(`music_note_write rejected (${res.status}): ${body?.error ?? res.statusText}`)
-      return { ok: true, note_id: body?.note?.note_id, shared: true, __text: `已把用户原话写在《${track.name || '这首歌'}》的 B 面。` }
+      const preference = a.preference === 'liked' || a.preference === 'disliked' ? a.preference : ''
+      if (preference && body?.preference_recorded !== preference) {
+        throw new Error('music_note_write: explicit preference was not persisted')
+      }
+      const preferenceText = preference === 'liked' ? '，并记录为用户明确喜欢'
+        : preference === 'disliked' ? '，并记录为用户明确不喜欢' : ''
+      return {
+        ok: true,
+        note_id: body?.note?.note_id,
+        shared: true,
+        preference: preference || undefined,
+        __text: `已把用户原话写在《${track.name || '这首歌'}》的 B 面${preferenceText}。`,
+      }
     },
   }))
 
@@ -437,7 +453,7 @@ const MUSIC_TOOL_DESCRIPTIONS: Record<string, { description: string; parameters?
     parameters: {},
   },
   rate_song: {
-    description: '记录用户对当前在播曲目的好恶，影响以后推荐。「这首好听/我喜欢」→liked:true；「这首不好听/难听」→liked:false。',
+    description: '只记录用户对当前曲目的明确好恶，不保存 B 面原话。若用户同时说出了值得保留的听感原话，应改用 music_note_write 并填写 preference，禁止两个工具重复记录同一次表达。',
     parameters: {
       liked: { type: 'boolean', description: 'true=喜欢，false=不喜欢。' },
     },
