@@ -12,7 +12,7 @@
 从 DSH 源码工作区运行时：
 
 ```powershell
-$env:DSH_HOME = 'E:\path\to\isolated-dsh-home'
+$env:DSH_HOME = '<absolute-path-to-isolated-dsh-home>'
 pnpm install --frozen-lockfile
 pnpm run build
 ```
