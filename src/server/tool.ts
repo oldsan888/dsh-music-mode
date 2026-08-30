@@ -3,11 +3,8 @@
  * 经 server-visual 反代的命令注入端点驱动「音乐」tab 播放器。
  *
  * 自 DSH 本体 @deepseek-ai/dsh-tool-music（2026-08-19）迁入，独立插件化要点：
- * - `@deepseek-ai/dsh-tools` 的 defineTool 为 value import，但 npm 上该包依赖
- *   未发布的内部子包（@deepseek-ai/dsh-type-meta）→ 不能作为普通 devDep 安装；
- *   因此 host 构建将其 external（tsdown external），运行时解析到宿主 DSH 进程
- *   内宿主提供的 @deepseek-ai/dsh-tools（宿主 profile 的 node_modules 提供）。
- * - 本地类型 shim：src/typings/dsh-tools.d.ts（声明 defineTool / ParameterSchemaSpec 形态）。
+ * - `@deepseek-ai/dsh-tools` 的 defineTool 为宿主 API；构建时 external，运行时
+ *   解析到 DSH profile 提供的同一份包，避免重复注册工具服务。
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -330,7 +327,7 @@ export function apply(ctx: Context, config: Config = {}): void {
         ok: true,
         note_id: body?.note?.note_id,
         shared: true,
-        preference: preference || undefined,
+        ...(preference ? { preference } : {}),
         __text: `已把用户原话写在《${track.name || '这首歌'}》的 B 面${preferenceText}。`,
       }
     },

@@ -6,7 +6,7 @@
  *   相对解析，lib 或 src 产物位置皆可）——独立包内天然成立，包内即含该资源。
  * - 含 E5 修复：makeApiProxy 转发上游响应头（SSE 必须的 content-type:
  *   text/event-stream 透传），否则浏览器 EventSource 拒绝解析 → relay 恒 timeout。
- * - 宿主类型（@deepseek-ai/dsh-host-webserver）由本地 shim 提供（src/typings）。
+ * - 宿主类型由 peer/dev dependency 的 @deepseek-ai/dsh-host-webserver 提供。
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
@@ -20,6 +20,7 @@ import { request } from 'node:http'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-host-webserver'
 
 /**
  * 解析 vendor 包根（`vendor/regret-radio`，即 vendored Regret-radio 音乐核心）。
