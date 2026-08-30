@@ -126,8 +126,11 @@ pnpm dsh --profile web --no-open
 1. 停止 DSH。
 2. 备份 `$DSH_HOME/dsh-music/data/`。
 3. 审阅新 commit。
-4. 把 Git dependency 与 `allowBuilds` 精确键一起更新到新 SHA。
-5. 重装并重新执行完整验收。
+4. 在 `allowBuilds` 中暂时同时保留旧 SHA 与新 SHA，且都设为 `true`。
+5. 用新 SHA 执行 plugin add；确认 lockfile 已切换到新 commit。
+6. 删除旧 SHA 的 `allowBuilds` 键，再重新执行完整验收。
+
+pnpm 在替换 Git 包的安装事务中仍可能检查旧 revision 的构建许可。若提前删除旧键，它会报 `ERR_PNPM_IGNORED_BUILDS`，并可能为旧 SHA 写入 `set this to true or false` 占位项；将旧、新键暂时同时授权即可完成升级。
 
 卸载使用 DSH plugin remove 命令。卸载插件不会自动删除 `$DSH_HOME/dsh-music/data/`；确认备份与用途后再由用户决定是否清理。
 
