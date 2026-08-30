@@ -47,3 +47,7 @@ test('git preparation explicitly allows native and bundler build scripts', () =>
   assert.equal(workspace.allowBuilds['better-sqlite3'], true)
   assert.equal(workspace.allowBuilds.esbuild, true)
 })
+
+test('published package carries the indexed public documentation', () => {
+  assert.ok(pkg.files.includes('docs/*.md'))
+})

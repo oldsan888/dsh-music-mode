@@ -36,7 +36,9 @@ export default defineConfig([
     fixedExtension: false,
     dts: false,
     clean: true,
-    external: ['@deepseek-ai/cordis', '@deepseek-ai/dsh-tools'],
+    deps: {
+      neverBundle: ['@deepseek-ai/cordis', '@deepseek-ai/dsh-tools'],
+    },
   },
   // client（browser CJS，__ModuleLoader__ 工厂）
   {
@@ -48,8 +50,10 @@ export default defineConfig([
     dts: false,
     sourcemap: true,
     clean: false,
-    external: [...PLATFORM],
-    noExternal: (id: string) => (PLATFORM.includes(id as never) ? undefined : true),
+    deps: {
+      neverBundle: [...PLATFORM],
+      alwaysBundle: (id: string) => (PLATFORM.includes(id as never) ? undefined : true),
+    },
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
       'import.meta.env.MODE': JSON.stringify(process.env.NODE_ENV ?? 'production'),

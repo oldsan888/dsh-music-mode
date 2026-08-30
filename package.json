@@ -32,6 +32,7 @@
     "vendor/regret-radio/README.md",
     "cordis.patch.yml",
     "README.md",
+    "docs/*.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
