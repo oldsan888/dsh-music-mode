@@ -1,5 +1,7 @@
 # @oldsan888/dsh-music-mode
 
+音乐插件改自：https://github.com/XxHuberrr/Mineradio。感谢原作者的开源。
+
 DSH 音乐模式插件：在 DSH Web 中加入「音乐」视图，托管 regret-radio 播放器，并向 Agent 提供播放控制、状态读取、滚动口味画像与用户授权听感手记工具。
 
 插件以一个 bundle 接入 DSH，不修改 DSH 源码；运行数据独立保存在 `$DSH_HOME/dsh-music/data/`。
